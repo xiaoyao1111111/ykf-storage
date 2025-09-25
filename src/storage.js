@@ -1,6 +1,8 @@
-// Firebase-backed store for users and records
+// 智能存储：优先使用 TiDB Cloud，回退到 Firebase 和本地存储
 import { db } from './firebase'
 import { collection, addDoc, getDocs, query, orderBy, deleteDoc, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore'
+import { getConnection, initDatabase } from './tidb'
+import * as tidbStorage from './storage-tidb'
 
 const SESSION_KEY = 'ykf_session_user';
 
@@ -15,27 +17,54 @@ function writeSession(value) {
 }
 
 export async function seedUsersIfEmpty() {
-	// Store seed users in a 'users' collection if empty
-	const usersRef = collection(db, 'users');
-	const snap = await getDocs(usersRef);
-	if (!snap.empty) return;
-	await addDoc(usersRef, { username: '姚凯峰', password: 'root' });
-	await addDoc(usersRef, { username: '笑笑', password: '5555' });
+	// 优先使用 TiDB
+	try {
+		await tidbStorage.seedUsersIfEmpty()
+		return
+	} catch (tidbError) {
+		console.log('TiDB not available, trying Firebase:', tidbError.message)
+	}
+
+	// 回退到 Firebase
+	try {
+		const usersRef = collection(db, 'users');
+		const snap = await getDocs(usersRef);
+		if (!snap.empty) return;
+		await addDoc(usersRef, { username: '姚凯峰', password: 'root' });
+		await addDoc(usersRef, { username: '笑笑', password: '5555' });
+		console.log('Default users seeded in Firebase');
+	} catch (error) {
+		console.error('Error seeding users:', error);
+	}
 }
 
 export async function login(username, password) {
-	const usersRef = collection(db, 'users');
-	const snap = await getDocs(usersRef);
-	let ok = false;
-	for (const u of snap.docs) {
-		const data = u.data();
-		if (data.username === username && data.password === password) {
-			writeSession({ username: data.username });
-			ok = true;
-			break;
-		}
+	// 优先使用 TiDB
+	try {
+		const result = await tidbStorage.login(username, password)
+		if (result.ok) return result
+	} catch (tidbError) {
+		console.log('TiDB login failed, trying Firebase:', tidbError.message)
 	}
-	return ok ? { ok: true, user: { username } } : { ok: false, error: '用户名或密码不正确' };
+
+	// 回退到 Firebase
+	try {
+		const usersRef = collection(db, 'users');
+		const snap = await getDocs(usersRef);
+		let ok = false;
+		for (const u of snap.docs) {
+			const data = u.data();
+			if (data.username === username && data.password === password) {
+				writeSession({ username: data.username });
+				ok = true;
+				break;
+			}
+		}
+		return ok ? { ok: true, user: { username } } : { ok: false, error: '用户名或密码不正确' };
+	} catch (error) {
+		console.error('Firebase login error:', error);
+		return { ok: false, error: '登录失败，请检查网络连接' };
+	}
 }
 
 export function logout() {
@@ -47,7 +76,14 @@ export function getSessionUser() {
 }
 
 export async function listRecords() {
-	// 如果 Firebase 不可用，直接使用本地存储
+	// 优先使用 TiDB
+	try {
+		return await tidbStorage.listRecords()
+	} catch (tidbError) {
+		console.log('TiDB not available, trying Firebase:', tidbError.message)
+	}
+
+	// 回退到 Firebase
 	if (!db) {
 		console.log('Firebase not available, using local storage');
 		try {
@@ -100,7 +136,14 @@ export async function addRecord(record) {
 	for (const f of required) if (!record[f]) throw new Error(`缺少必填字段: ${f}`);
 	if (!/^\d{4}$/.test(String(record.phoneLast4))) throw new Error('电话后四位需为4位数字');
 
-	// 如果 Firebase 不可用，直接保存到本地存储
+	// 优先使用 TiDB
+	try {
+		return await tidbStorage.addRecord(record)
+	} catch (tidbError) {
+		console.log('TiDB not available, trying Firebase:', tidbError.message)
+	}
+
+	// 回退到 Firebase
 	if (!db) {
 		console.log('Firebase not available, saving to local storage');
 		try {
@@ -169,8 +212,21 @@ export async function addRecord(record) {
 }
 
 export async function removeRecord(id) {
-	await deleteDoc(doc(db, 'records', id));
-	return true;
+	// 优先使用 TiDB
+	try {
+		return await tidbStorage.removeRecord(id)
+	} catch (tidbError) {
+		console.log('TiDB not available, trying Firebase:', tidbError.message)
+	}
+
+	// 回退到 Firebase
+	try {
+		await deleteDoc(doc(db, 'records', id));
+		return true;
+	} catch (error) {
+		console.error('Error removing record:', error);
+		throw error;
+	}
 }
 
 export async function clearAll() {
@@ -181,18 +237,32 @@ export async function clearAll() {
 export async function takeFromRecord(id, amount, operator) {
 	const qty = Number(amount);
 	if (!Number.isFinite(qty) || qty <= 0) throw new Error('取出数量需为正数');
-	const ref = doc(db, 'records', id);
-	const snapshot = await getDoc(ref);
-	if (!snapshot.exists()) throw new Error('记录不存在');
-	const rec = snapshot.data();
-	if (qty > Number(rec.quantity)) throw new Error('库存不足');
-	await updateDoc(ref, {
-		quantity: Number(rec.quantity) - qty,
-		lastTakenAt: Date.now(),
-		lastOperator: operator || ''
-	});
-	const updated = await getDoc(ref);
-	return { id, ...updated.data() };
+
+	// 优先使用 TiDB
+	try {
+		return await tidbStorage.takeFromRecord(id, amount, operator)
+	} catch (tidbError) {
+		console.log('TiDB not available, trying Firebase:', tidbError.message)
+	}
+
+	// 回退到 Firebase
+	try {
+		const ref = doc(db, 'records', id);
+		const snapshot = await getDoc(ref);
+		if (!snapshot.exists()) throw new Error('记录不存在');
+		const rec = snapshot.data();
+		if (qty > Number(rec.quantity)) throw new Error('库存不足');
+		await updateDoc(ref, {
+			quantity: Number(rec.quantity) - qty,
+			lastTakenAt: Date.now(),
+			lastOperator: operator || ''
+		});
+		const updated = await getDoc(ref);
+		return { id, ...updated.data() };
+	} catch (error) {
+		console.error('Error updating record:', error);
+		throw error;
+	}
 }
 
 
