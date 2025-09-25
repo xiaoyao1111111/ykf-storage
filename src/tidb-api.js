@@ -1,5 +1,21 @@
 // TiDB Cloud API 客户端
-const API_BASE_URL = 'https://ykf-storage-kvs7.vercel.app'
+const API_BASE_URL = 'https://ykf-storage-kvs7.vercel.app/api'
+
+// 测试 API 连接
+export async function testApiConnection() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/test`)
+    if (!response.ok) {
+      throw new Error('API 连接失败')
+    }
+    const result = await response.json()
+    console.log('API 连接测试成功:', result)
+    return true
+  } catch (error) {
+    console.error('API 连接测试失败:', error)
+    return false
+  }
+}
 
 // 初始化数据库
 export async function initDatabase() {
