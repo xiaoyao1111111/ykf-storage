@@ -70,21 +70,10 @@ const filtered = computed(() => {
 	})
 })
 
-onMounted(async () => { 
+onMounted(async () => {
 	await refresh()
-	// 测试 Firebase 连接
-	testFirebase()
 })
 
-async function testFirebase() {
-	try {
-		const testRef = collection(db, 'test')
-		await addDoc(testRef, { test: true, timestamp: Date.now() })
-		console.log('Firebase connection test: SUCCESS')
-	} catch (error) {
-		console.error('Firebase connection test: FAILED', error)
-	}
-}
 
 function exportCsv() {
 	const rows = filtered.value
