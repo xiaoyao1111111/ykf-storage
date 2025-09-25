@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import Login from './components/Login.vue'
 import StorageForm from './components/StorageForm.vue'
 import RecordList from './components/RecordList.vue'
@@ -7,6 +7,14 @@ import { getSessionUser, logout } from './storage'
 
 const user = ref(getSessionUser())
 const recordListRef = ref(null)
+
+const isOnline = computed(() => {
+	try {
+		return navigator?.onLine ?? true
+	} catch {
+		return true
+	}
+})
 
 function onLoginSuccess(u) {
 	user.value = u
@@ -40,7 +48,7 @@ function onRefresh() {
       <div class="debug-info" style="background:#f0f0f0;padding:8px;margin-bottom:12px;font-size:12px;">
         <div>用户: {{ user?.username }}</div>
         <div>时间: {{ new Date().toLocaleString() }}</div>
-        <div>网络: {{ navigator.onLine ? '在线' : '离线' }}</div>
+        <div>网络: {{ isOnline ? '在线' : '离线' }}</div>
       </div>
       <StorageForm @refresh="onRefresh" />
       <RecordList ref="recordListRef" />
