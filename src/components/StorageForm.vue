@@ -21,7 +21,9 @@ if (currentUser?.username) {
 }
 
 const canSubmit = computed(() => {
-	return form.value.date && form.value.productName && form.value.quantity && form.value.registrar && /^\d{4}$/.test(String(form.value.phoneLast4))
+	const valid = form.value.date && form.value.productName && form.value.quantity && form.value.registrar && /^\d{4}$/.test(String(form.value.phoneLast4))
+	console.log('Can submit:', valid, form.value)
+	return valid
 })
 
 function validatePhone() {
@@ -50,26 +52,36 @@ function resetForm() {
 	}
 }
 
+function testClick() {
+	console.log('Test button clicked!')
+	alert('测试按钮点击成功！')
+}
+
 const emit = defineEmits(['refresh'])
 
 async function submitForm(e) {
+	console.log('Form submit triggered')
 	e.preventDefault()
 	error.value = ''
 	success.value = ''
 	
 	if (!validatePhone()) {
 		error.value = phoneError.value
+		console.log('Phone validation failed:', phoneError.value)
 		return
 	}
 	
 	try {
+		console.log('Submitting form:', form.value)
 		const payload = { ...form.value }
 		await addRecord(payload)
+		console.log('Record added successfully')
 		success.value = '保存成功'
 		error.value = ''
 		resetForm()
 		emit('refresh')
 	} catch (err) {
+		console.error('Error submitting form:', err)
 		success.value = ''
 		error.value = err?.message || '保存失败'
 	}
@@ -107,7 +119,8 @@ async function submitForm(e) {
       </div>
     </div>
     <div class="form-actions">
-      <button :disabled="!canSubmit" type="submit" class="submit-btn">保存</button>
+      <button :disabled="!canSubmit" type="submit" class="submit-btn" @click="submitForm">保存</button>
+      <button type="button" @click="testClick" style="padding:8px 12px;border:1px solid #666;background:#f0f0f0;margin-left:8px;">测试点击</button>
       <span v-if="success" class="success-message">{{ success }}</span>
       <span v-if="error" class="error-message">{{ error }}</span>
     </div>
