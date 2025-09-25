@@ -1,8 +1,14 @@
 # TiDB Cloud 部署指南
 
+## 当前状态
+
+由于 Vercel API 部署遇到问题，系统目前使用 **Firebase + 本地存储** 的智能回退机制。
+
 ## 部署步骤
 
-### 1. 部署 API 服务到 Vercel
+### 1. 部署 API 服务到 Vercel（可选）
+
+如果你想使用 TiDB Cloud，需要正确部署 API 服务：
 
 1. 访问 [https://vercel.com](https://vercel.com)
 2. 用 GitHub 账号登录
@@ -13,7 +19,14 @@
    - Root Directory: `./`
    - Build Command: `npm run build`
    - Output Directory: `dist`
-6. 点击 "Deploy"
+6. 确保 `api/` 文件夹在根目录
+7. 点击 "Deploy"
+
+### 2. 验证 API 部署
+
+部署完成后，访问：
+- `https://你的域名.vercel.app/api/test` - 应该返回 JSON 响应
+- 如果返回 404，说明 API 路由没有正确部署
 
 ### 2. 获取 API 地址
 

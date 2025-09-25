@@ -4,15 +4,21 @@ const API_BASE_URL = 'https://ykf-storage-kvs7.vercel.app/api'
 // 测试 API 连接
 export async function testApiConnection() {
   try {
-    const response = await fetch(`${API_BASE_URL}/test`)
+    const response = await fetch(`${API_BASE_URL}/test`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
     if (!response.ok) {
-      throw new Error('API 连接失败')
+      throw new Error(`API 连接失败: ${response.status}`)
     }
     const result = await response.json()
     console.log('API 连接测试成功:', result)
     return true
   } catch (error) {
     console.error('API 连接测试失败:', error)
+    console.log('将使用 Firebase 作为备用存储')
     return false
   }
 }
