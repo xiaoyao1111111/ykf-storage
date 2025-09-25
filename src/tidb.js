@@ -6,7 +6,7 @@ const tidbConfig = {
   host: 'gateway01.ap-southeast-1.prod.alicloud.tidbcloud.com',
   port: 4000,
   user: 'mhQEth2ZowdRzq1.root',
-  password: 'PASSWORD', // 请替换为你的实际密码
+  password: 'AyAix0MMXNaeOIFm',
   database: 'test',
   ssl: {
     rejectUnauthorized: false
