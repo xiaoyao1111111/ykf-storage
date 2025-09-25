@@ -17,6 +17,13 @@ function writeJson(key, value) {
 	localStorage.setItem(key, JSON.stringify(value));
 }
 
+function generateId() {
+	// Simple, collision-resistant enough for this app without using global crypto
+	const now = Date.now().toString(36);
+	const rand = Math.random().toString(36).slice(2, 10);
+	return `${now}-${rand}`;
+}
+
 export function seedUsersIfEmpty() {
 	const existing = readJson(USERS_KEY, null);
 	if (existing && Array.isArray(existing) && existing.length > 0) return;
@@ -59,7 +66,7 @@ export function addRecord(record) {
 		throw new Error('电话后四位需为4位数字');
 	}
 	const normalized = {
-		id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2),
+		id: generateId(),
 		date: record.date,
 		productName: record.productName,
 		quantity: Number(record.quantity),
