@@ -21,8 +21,25 @@ if (currentUser?.username) {
 }
 
 const canSubmit = computed(() => {
-	const valid = form.value.date && form.value.productName && form.value.quantity && form.value.registrar && /^\d{4}$/.test(String(form.value.phoneLast4))
-	console.log('Can submit:', valid, form.value)
+	const hasDate = !!form.value.date
+	const hasProduct = !!form.value.productName
+	const hasQuantity = !!form.value.quantity
+	const hasRegistrar = !!form.value.registrar
+	const hasValidPhone = /^\d{4}$/.test(String(form.value.phoneLast4))
+	
+	const valid = hasDate && hasProduct && hasQuantity && hasRegistrar && hasValidPhone
+	
+	console.log('Can submit check:', {
+		hasDate,
+		hasProduct, 
+		hasQuantity,
+		hasRegistrar,
+		hasValidPhone,
+		phoneValue: form.value.phoneLast4,
+		valid,
+		form: form.value
+	})
+	
 	return valid
 })
 
@@ -55,6 +72,23 @@ function resetForm() {
 function testClick() {
 	console.log('Test button clicked!')
 	alert('测试按钮点击成功！')
+}
+
+async function forceSubmit() {
+	console.log('Force submit triggered')
+	try {
+		const payload = { ...form.value }
+		await addRecord(payload)
+		console.log('Record added successfully via force submit')
+		success.value = '强制保存成功'
+		error.value = ''
+		resetForm()
+		emit('refresh')
+	} catch (err) {
+		console.error('Error in force submit:', err)
+		success.value = ''
+		error.value = err?.message || '强制保存失败'
+	}
 }
 
 const emit = defineEmits(['refresh'])
@@ -121,6 +155,7 @@ async function submitForm(e) {
     <div class="form-actions">
       <button :disabled="!canSubmit" type="submit" class="submit-btn" @click="submitForm">保存</button>
       <button type="button" @click="testClick" style="padding:8px 12px;border:1px solid #666;background:#f0f0f0;margin-left:8px;">测试点击</button>
+      <button type="button" @click="forceSubmit" style="padding:8px 12px;border:1px solid #f00;background:#fcc;margin-left:8px;">强制保存</button>
       <span v-if="success" class="success-message">{{ success }}</span>
       <span v-if="error" class="error-message">{{ error }}</span>
     </div>
