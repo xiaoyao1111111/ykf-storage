@@ -19,7 +19,11 @@ const isOnline = computed(() => {
 
 const storageMode = computed(() => {
 	// 检测存储模式
-	return 'Firebase 代理云端'
+	if (db) {
+		return 'Firebase 云端'
+	} else {
+		return '本地存储'
+	}
 })
 
 function onLoginSuccess(u) {
