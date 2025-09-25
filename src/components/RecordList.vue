@@ -1,6 +1,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { listRecords, removeRecord, takeFromRecord, getSessionUser } from '../storage'
+import { collection, addDoc } from 'firebase/firestore'
+import { db } from '../firebase'
 
 const loading = ref(false)
 const records = ref([])
@@ -68,7 +70,21 @@ const filtered = computed(() => {
 	})
 })
 
-onMounted(() => { refresh() })
+onMounted(() => { 
+	refresh()
+	// 测试 Firebase 连接
+	testFirebase()
+})
+
+async function testFirebase() {
+	try {
+		const testRef = collection(db, 'test')
+		await addDoc(testRef, { test: true, timestamp: Date.now() })
+		console.log('Firebase connection test: SUCCESS')
+	} catch (error) {
+		console.error('Firebase connection test: FAILED', error)
+	}
+}
 
 function exportCsv() {
 	const rows = filtered.value

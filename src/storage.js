@@ -47,27 +47,41 @@ export function getSessionUser() {
 }
 
 export async function listRecords() {
-	const recordsRef = collection(db, 'records');
-	const qy = query(recordsRef, orderBy('createdAt', 'desc'));
-	const snap = await getDocs(qy);
-	return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+	try {
+		const recordsRef = collection(db, 'records');
+		const qy = query(recordsRef, orderBy('createdAt', 'desc'));
+		const snap = await getDocs(qy);
+		console.log('Firebase records loaded:', snap.docs.length);
+		return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+	} catch (error) {
+		console.error('Error loading records:', error);
+		return [];
+	}
 }
 
 export async function addRecord(record) {
-	const required = ['date', 'productName', 'quantity', 'registrar', 'phoneLast4'];
-	for (const f of required) if (!record[f]) throw new Error(`缺少必填字段: ${f}`);
-	if (!/^\d{4}$/.test(String(record.phoneLast4))) throw new Error('电话后四位需为4位数字');
-	const docRef = await addDoc(collection(db, 'records'), {
-		date: record.date,
-		productName: record.productName,
-		quantity: Number(record.quantity),
-		customerName: record.customerName || '',
-		phoneLast4: record.phoneLast4,
-		registrar: record.registrar,
-		createdAt: Date.now(),
-	});
-	const created = await getDoc(doc(db, 'records', docRef.id));
-	return { id: docRef.id, ...created.data() };
+	try {
+		const required = ['date', 'productName', 'quantity', 'registrar', 'phoneLast4'];
+		for (const f of required) if (!record[f]) throw new Error(`缺少必填字段: ${f}`);
+		if (!/^\d{4}$/.test(String(record.phoneLast4))) throw new Error('电话后四位需为4位数字');
+		
+		const docRef = await addDoc(collection(db, 'records'), {
+			date: record.date,
+			productName: record.productName,
+			quantity: Number(record.quantity),
+			customerName: record.customerName || '',
+			phoneLast4: record.phoneLast4,
+			registrar: record.registrar,
+			createdAt: Date.now(),
+		});
+		console.log('Record added to Firebase:', docRef.id);
+		
+		const created = await getDoc(doc(db, 'records', docRef.id));
+		return { id: docRef.id, ...created.data() };
+	} catch (error) {
+		console.error('Error adding record:', error);
+		throw error;
+	}
 }
 
 export async function removeRecord(id) {
