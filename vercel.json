@@ -1,0 +1,14 @@
+{
+  "functions": {
+    "api/*.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "env": {
+    "TIDB_HOST": "gateway01.ap-southeast-1.prod.alicloud.tidbcloud.com",
+    "TIDB_PORT": "4000",
+    "TIDB_USER": "mhQEth2ZowdRzq1.root",
+    "TIDB_PASSWORD": "AyAix0MMXNaeOIFm",
+    "TIDB_DATABASE": "test"
+  }
+}
