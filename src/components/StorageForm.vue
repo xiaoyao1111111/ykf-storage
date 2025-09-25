@@ -2,8 +2,17 @@
 import { ref, computed } from 'vue'
 import { addRecord, getSessionUser } from '../storage'
 
+// 获取今天的日期，格式为 YYYY-MM-DD
+function getTodayDate() {
+	const today = new Date()
+	const year = today.getFullYear()
+	const month = String(today.getMonth() + 1).padStart(2, '0')
+	const day = String(today.getDate()).padStart(2, '0')
+	return `${year}-${month}-${day}`
+}
+
 const form = ref({
-	date: '',
+	date: getTodayDate(), // 自动设置为今天
 	productName: '',
 	quantity: '',
 	customerName: '',
@@ -58,7 +67,7 @@ function validatePhone() {
 }
 
 function resetForm() {
-	form.value.date = ''
+	form.value.date = getTodayDate() // 重置为今天
 	form.value.productName = ''
 	form.value.quantity = ''
 	form.value.customerName = ''
