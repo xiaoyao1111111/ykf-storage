@@ -5,7 +5,6 @@ import StorageForm from './components/StorageForm.vue'
 import RecordList from './components/RecordList.vue'
 import { getSessionUser, logout } from './storage'
 import { db } from './firebase'
-import { getConnection } from './tidb'
 
 const user = ref(getSessionUser())
 const recordListRef = ref(null)
@@ -20,9 +19,7 @@ const isOnline = computed(() => {
 
 const storageMode = computed(() => {
 	// 检测存储模式
-	if (getConnection) {
-		return 'TiDB 云端'
-	} else if (db) {
+	if (db) {
 		return 'Firebase 云端'
 	} else {
 		return '本地存储'

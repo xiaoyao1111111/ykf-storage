@@ -1,8 +1,6 @@
-// 智能存储：优先使用 TiDB Cloud，回退到 Firebase 和本地存储
+// 智能存储：优先使用 Firebase，回退到本地存储
 import { db } from './firebase'
 import { collection, addDoc, getDocs, query, orderBy, deleteDoc, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore'
-import { getConnection, initDatabase } from './tidb'
-import * as tidbStorage from './storage-tidb'
 
 const SESSION_KEY = 'ykf_session_user';
 
@@ -17,15 +15,7 @@ function writeSession(value) {
 }
 
 export async function seedUsersIfEmpty() {
-	// 优先使用 TiDB
-	try {
-		await tidbStorage.seedUsersIfEmpty()
-		return
-	} catch (tidbError) {
-		console.log('TiDB not available, trying Firebase:', tidbError.message)
-	}
-
-	// 回退到 Firebase
+	// 使用 Firebase
 	try {
 		const usersRef = collection(db, 'users');
 		const snap = await getDocs(usersRef);
@@ -39,15 +29,7 @@ export async function seedUsersIfEmpty() {
 }
 
 export async function login(username, password) {
-	// 优先使用 TiDB
-	try {
-		const result = await tidbStorage.login(username, password)
-		if (result.ok) return result
-	} catch (tidbError) {
-		console.log('TiDB login failed, trying Firebase:', tidbError.message)
-	}
-
-	// 回退到 Firebase
+	// 使用 Firebase
 	try {
 		const usersRef = collection(db, 'users');
 		const snap = await getDocs(usersRef);
@@ -76,14 +58,7 @@ export function getSessionUser() {
 }
 
 export async function listRecords() {
-	// 优先使用 TiDB
-	try {
-		return await tidbStorage.listRecords()
-	} catch (tidbError) {
-		console.log('TiDB not available, trying Firebase:', tidbError.message)
-	}
-
-	// 回退到 Firebase
+	// 如果 Firebase 不可用，直接使用本地存储
 	if (!db) {
 		console.log('Firebase not available, using local storage');
 		try {
@@ -136,14 +111,7 @@ export async function addRecord(record) {
 	for (const f of required) if (!record[f]) throw new Error(`缺少必填字段: ${f}`);
 	if (!/^\d{4}$/.test(String(record.phoneLast4))) throw new Error('电话后四位需为4位数字');
 
-	// 优先使用 TiDB
-	try {
-		return await tidbStorage.addRecord(record)
-	} catch (tidbError) {
-		console.log('TiDB not available, trying Firebase:', tidbError.message)
-	}
-
-	// 回退到 Firebase
+	// 如果 Firebase 不可用，直接保存到本地存储
 	if (!db) {
 		console.log('Firebase not available, saving to local storage');
 		try {
@@ -212,14 +180,7 @@ export async function addRecord(record) {
 }
 
 export async function removeRecord(id) {
-	// 优先使用 TiDB
-	try {
-		return await tidbStorage.removeRecord(id)
-	} catch (tidbError) {
-		console.log('TiDB not available, trying Firebase:', tidbError.message)
-	}
-
-	// 回退到 Firebase
+	// 使用 Firebase
 	try {
 		await deleteDoc(doc(db, 'records', id));
 		return true;
@@ -238,14 +199,7 @@ export async function takeFromRecord(id, amount, operator) {
 	const qty = Number(amount);
 	if (!Number.isFinite(qty) || qty <= 0) throw new Error('取出数量需为正数');
 
-	// 优先使用 TiDB
-	try {
-		return await tidbStorage.takeFromRecord(id, amount, operator)
-	} catch (tidbError) {
-		console.log('TiDB not available, trying Firebase:', tidbError.message)
-	}
-
-	// 回退到 Firebase
+	// 使用 Firebase
 	try {
 		const ref = doc(db, 'records', id);
 		const snapshot = await getDoc(ref);
