@@ -47,6 +47,22 @@ export function getSessionUser() {
 }
 
 export async function listRecords() {
+	// 如果 Firebase 不可用，直接使用本地存储
+	if (!db) {
+		console.log('Firebase not available, using local storage');
+		try {
+			const backup = localStorage.getItem('ykf_records_backup');
+			if (backup) {
+				const localRecords = JSON.parse(backup);
+				console.log('Loaded from local storage:', localRecords.length, 'records');
+				return localRecords;
+			}
+		} catch (error) {
+			console.error('Error loading from local storage:', error);
+		}
+		return [];
+	}
+
 	try {
 		const recordsRef = collection(db, 'records');
 		const qy = query(recordsRef, orderBy('createdAt', 'desc'));
@@ -80,11 +96,32 @@ export async function listRecords() {
 }
 
 export async function addRecord(record) {
+	const required = ['date', 'productName', 'quantity', 'registrar', 'phoneLast4'];
+	for (const f of required) if (!record[f]) throw new Error(`缺少必填字段: ${f}`);
+	if (!/^\d{4}$/.test(String(record.phoneLast4))) throw new Error('电话后四位需为4位数字');
+
+	// 如果 Firebase 不可用，直接保存到本地存储
+	if (!db) {
+		console.log('Firebase not available, saving to local storage');
+		try {
+			const records = JSON.parse(localStorage.getItem('ykf_records_backup') || '[]');
+			const newRecord = {
+				id: Date.now().toString(),
+				...record,
+				quantity: Number(record.quantity),
+				createdAt: new Date().toISOString(),
+			};
+			records.unshift(newRecord);
+			localStorage.setItem('ykf_records_backup', JSON.stringify(records));
+			console.log('Record saved to local storage:', newRecord.id);
+			return newRecord;
+		} catch (error) {
+			console.error('Error saving to local storage:', error);
+			throw error;
+		}
+	}
+
 	try {
-		const required = ['date', 'productName', 'quantity', 'registrar', 'phoneLast4'];
-		for (const f of required) if (!record[f]) throw new Error(`缺少必填字段: ${f}`);
-		if (!/^\d{4}$/.test(String(record.phoneLast4))) throw new Error('电话后四位需为4位数字');
-		
 		const docRef = await addDoc(collection(db, 'records'), {
 			date: record.date,
 			productName: record.productName,
@@ -96,11 +133,38 @@ export async function addRecord(record) {
 		});
 		console.log('Record added to Firebase:', docRef.id);
 		
+		// 同时保存到本地存储作为备份
+		const records = JSON.parse(localStorage.getItem('ykf_records_backup') || '[]');
+		const newRecord = {
+			id: docRef.id,
+			...record,
+			quantity: Number(record.quantity),
+			createdAt: new Date().toISOString(),
+		};
+		records.unshift(newRecord);
+		localStorage.setItem('ykf_records_backup', JSON.stringify(records));
+		
 		const created = await getDoc(doc(db, 'records', docRef.id));
 		return { id: docRef.id, ...created.data() };
 	} catch (error) {
-		console.error('Error adding record:', error);
-		throw error;
+		console.error('Error adding record to Firebase:', error);
+		// 如果 Firebase 失败，保存到本地存储
+		try {
+			const records = JSON.parse(localStorage.getItem('ykf_records_backup') || '[]');
+			const newRecord = {
+				id: Date.now().toString(),
+				...record,
+				quantity: Number(record.quantity),
+				createdAt: new Date().toISOString(),
+			};
+			records.unshift(newRecord);
+			localStorage.setItem('ykf_records_backup', JSON.stringify(records));
+			console.log('Record saved to local storage as fallback:', newRecord.id);
+			return newRecord;
+		} catch (localError) {
+			console.error('Error saving to local storage:', localError);
+			throw localError;
+		}
 	}
 }
 

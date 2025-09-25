@@ -1,4 +1,4 @@
-// Firebase initialization
+// 网络检测和回退机制
 import { initializeApp } from 'firebase/app'
 import { getFirestore } from 'firebase/firestore'
 
@@ -12,7 +12,17 @@ const firebaseConfig = {
 	measurementId: "G-4Q05ZM3V0H"
 }
 
-const app = initializeApp(firebaseConfig)
-export const db = getFirestore(app)
+let app, db
+try {
+	app = initializeApp(firebaseConfig)
+	db = getFirestore(app)
+	console.log('Firebase initialized successfully')
+} catch (error) {
+	console.error('Firebase initialization failed:', error)
+	// 如果 Firebase 初始化失败，使用本地存储
+	db = null
+}
+
+export { db }
 
 

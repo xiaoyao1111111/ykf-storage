@@ -4,6 +4,7 @@ import Login from './components/Login.vue'
 import StorageForm from './components/StorageForm.vue'
 import RecordList from './components/RecordList.vue'
 import { getSessionUser, logout } from './storage'
+import { db } from './firebase'
 
 const user = ref(getSessionUser())
 const recordListRef = ref(null)
@@ -14,6 +15,10 @@ const isOnline = computed(() => {
 	} catch {
 		return true
 	}
+})
+
+const storageMode = computed(() => {
+	return db ? '云端同步' : '本地存储'
 })
 
 function onLoginSuccess(u) {
@@ -49,6 +54,7 @@ function onRefresh() {
         <div>用户: {{ user?.username }}</div>
         <div>时间: {{ new Date().toLocaleString() }}</div>
         <div>网络: {{ isOnline ? '在线' : '离线' }}</div>
+        <div>存储: {{ storageMode }}</div>
       </div>
       <StorageForm @refresh="onRefresh" />
       <RecordList ref="recordListRef" />
