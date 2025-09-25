@@ -1,5 +1,5 @@
 // TiDB Cloud API 客户端
-const API_BASE_URL = 'https://ykf-storage-api.vercel.app/api'
+const API_BASE_URL = 'https://ykf-storage-kvs7.vercel.app'
 
 // 初始化数据库
 export async function initDatabase() {
