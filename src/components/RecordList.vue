@@ -30,31 +30,42 @@ function download(filename, text) {
 }
 
 async function refresh() {
+	console.log('RecordList refresh 方法被调用')
 	loading.value = true
 	try {
 		const data = await listRecords()
+		console.log('刷新获取到数据:', data.length, '条记录')
 		records.value = data
-	} finally { loading.value = false }
+	} finally { 
+		loading.value = false 
+		console.log('RecordList refresh 完成')
+	}
 }
 
 // 暴露给父组件调用
 defineExpose({ refresh })
 
-function onRemove(id) {
+async function onRemove(id) {
 	if (confirm('确定删除该记录吗？')) {
-		removeRecord(id)
-		refresh()
+		try {
+			await removeRecord(id)
+			await refresh()
+		} catch (error) {
+			console.error('删除记录失败:', error)
+			alert('删除失败: ' + error.message)
+		}
 	}
 }
 
-function onTake(r) {
-	const amount = prompt(`输入从“${r.productName}”取出的数量（当前库存：${r.quantity}）`)
+async function onTake(r) {
+	const amount = prompt(`输入从"${r.productName}"取出的数量（当前库存：${r.quantity}）`)
 	if (amount == null) return
 	try {
 		const user = getSessionUser()
-		takeFromRecord(r.id, amount, user?.username || '')
-		refresh()
+		await takeFromRecord(r.id, amount, user?.username || '')
+		await refresh()
 	} catch (e) {
+		console.error('取出记录失败:', e)
 		alert(e?.message || '取出失败')
 	}
 }
@@ -100,6 +111,7 @@ function exportCsv() {
       <h3 style="margin:0;">记录列表</h3>
       <div class="search-export">
         <input v-model="keyword" placeholder="搜索：尾号/客户名/品名" class="search-input" />
+        <button @click="refresh" class="refresh-btn" :disabled="loading">刷新</button>
         <button @click="exportCsv" class="export-btn">导出CSV</button>
       </div>
     </div>
@@ -162,6 +174,22 @@ function exportCsv() {
   border-radius: 6px;
 }
 
+.refresh-btn {
+  padding: 8px 12px;
+  border: 1px solid #10b981;
+  border-radius: 8px;
+  background: #10b981;
+  color: #fff;
+  white-space: nowrap;
+  margin-right: 8px;
+}
+
+.refresh-btn:disabled {
+  background: #9ca3af;
+  border-color: #9ca3af;
+  cursor: not-allowed;
+}
+
 .export-btn {
   padding: 8px 12px;
   border: 1px solid #0ea5e9;
@@ -187,6 +215,7 @@ function exportCsv() {
     max-width: none;
   }
   
+  .refresh-btn,
   .export-btn {
     width: 100%;
   }

@@ -36,8 +36,12 @@ function onLogout() {
 }
 
 function onRefresh() {
+	console.log('App.vue 收到刷新事件')
 	if (recordListRef.value) {
+		console.log('调用 RecordList refresh 方法')
 		recordListRef.value.refresh()
+	} else {
+		console.log('recordListRef.value 为空')
 	}
 }
 </script>

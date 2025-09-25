@@ -88,6 +88,7 @@ async function submitForm(e) {
 		success.value = '保存成功'
 		error.value = ''
 		resetForm()
+		console.log('触发刷新事件')
 		emit('refresh')
 	} catch (err) {
 		console.error('Error submitting form:', err)
