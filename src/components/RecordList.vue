@@ -1,12 +1,38 @@
 <script setup>
-import { ref, computed, watchEffect } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { listRecords, removeRecord, takeFromRecord, getSessionUser } from '../storage'
 
+const loading = ref(false)
 const records = ref([])
 const keyword = ref('')
 
-function refresh() {
-	records.value = listRecords().sort((a, b) => (a.createdAt > b.createdAt ? -1 : 1))
+function toCsvValue(v) {
+	if (v == null) return ''
+	const s = String(v)
+	if (s.includes('"') || s.includes(',') || s.includes('\n')) {
+		return '"' + s.replace(/"/g, '""') + '"'
+	}
+	return s
+}
+
+function download(filename, text) {
+	const blob = new Blob([text], { type: 'text/csv;charset=utf-8;' })
+	const url = URL.createObjectURL(blob)
+	const a = document.createElement('a')
+	a.href = url
+	a.download = filename
+	document.body.appendChild(a)
+	a.click()
+	document.body.removeChild(a)
+	URL.revokeObjectURL(url)
+}
+
+async function refresh() {
+	loading.value = true
+	try {
+		const data = await listRecords()
+		records.value = data
+	} finally { loading.value = false }
 }
 
 // 暴露给父组件调用
@@ -42,16 +68,35 @@ const filtered = computed(() => {
 	})
 })
 
-watchEffect(() => {
-	refresh()
-})
+onMounted(() => { refresh() })
+
+function exportCsv() {
+	const rows = filtered.value
+	const headers = ['日期','品名','数量','客户名','电话后四位','登记人']
+	const lines = [headers.map(toCsvValue).join(',')]
+	for (const r of rows) {
+		lines.push([
+			toCsvValue(r.date),
+			toCsvValue(r.productName),
+			toCsvValue(r.quantity),
+			toCsvValue(r.customerName),
+			toCsvValue(r.phoneLast4),
+			toCsvValue(r.registrar),
+		].join(','))
+	}
+	const bom = '\ufeff' // Excel 兼容
+	download(`records-${new Date().toISOString().slice(0,10)}.csv`, bom + lines.join('\n'))
+}
 </script>
 
 <template>
   <div class="section">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:12px;">
+    <div class="list-header">
       <h3 style="margin:0;">记录列表</h3>
-      <input v-model="keyword" placeholder="搜索：尾号/客户名/品名" style="flex:1;max-width:320px;padding:8px;border:1px solid #ddd;border-radius:6px;" />
+      <div class="search-export">
+        <input v-model="keyword" placeholder="搜索：尾号/客户名/品名" class="search-input" />
+        <button @click="exportCsv" class="export-btn">导出CSV</button>
+      </div>
     </div>
     <div class="table-wrap">
       <table class="table">
@@ -90,6 +135,57 @@ watchEffect(() => {
 </template>
 
 <style scoped>
+.list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  gap: 12px;
+}
+
+.search-export {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.search-input {
+  flex: 1;
+  max-width: 320px;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+
+.export-btn {
+  padding: 8px 12px;
+  border: 1px solid #0ea5e9;
+  border-radius: 8px;
+  background: #0ea5e9;
+  color: #fff;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .list-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  .search-export {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .search-input {
+    max-width: none;
+  }
+  
+  .export-btn {
+    width: 100%;
+  }
+}
 </style>
 
 

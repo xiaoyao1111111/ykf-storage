@@ -52,7 +52,7 @@ function resetForm() {
 
 const emit = defineEmits(['refresh'])
 
-function submitForm(e) {
+async function submitForm(e) {
 	e.preventDefault()
 	error.value = ''
 	success.value = ''
@@ -64,7 +64,7 @@ function submitForm(e) {
 	
 	try {
 		const payload = { ...form.value }
-		addRecord(payload)
+		await addRecord(payload)
 		success.value = '保存成功'
 		error.value = ''
 		resetForm()
@@ -77,45 +77,128 @@ function submitForm(e) {
 </script>
 
 <template>
-  <form @submit="submitForm" class="card" style="max-width:820px;margin:24px auto;padding:20px;">
-    <h3 style="margin:0 0 12px;font-size:18px;">登记存放</h3>
+  <form @submit="submitForm" class="card storage-form">
+    <h3 class="form-title">登记存放</h3>
     <div class="form-grid">
-      <div>
-        <label style="display:block;margin-bottom:6px;">日期</label>
-        <input v-model="form.date" type="date" required style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" />
+      <div class="form-group">
+        <label>日期</label>
+        <input v-model="form.date" type="date" required class="form-input" />
       </div>
-      <div>
-        <label style="display:block;margin-bottom:6px;">品名</label>
-        <input v-model="form.productName" required placeholder="输入品名" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" />
+      <div class="form-group">
+        <label>品名</label>
+        <input v-model="form.productName" required placeholder="输入品名" class="form-input" />
       </div>
-      <div>
-        <label style="display:block;margin-bottom:6px;">数量</label>
-        <input v-model="form.quantity" required type="number" min="0" step="1" placeholder="输入数量" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" />
+      <div class="form-group">
+        <label>数量</label>
+        <input v-model="form.quantity" required type="number" min="0" step="1" placeholder="输入数量" class="form-input" />
       </div>
-      <div>
-        <label style="display:block;margin-bottom:6px;">客户名（可空）</label>
-        <input v-model="form.customerName" placeholder="输入客户名" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" />
+      <div class="form-group">
+        <label>客户名（可空）</label>
+        <input v-model="form.customerName" placeholder="输入客户名" class="form-input" />
       </div>
-      <div>
-        <label style="display:block;margin-bottom:6px;">电话后四位</label>
-        <input v-model="form.phoneLast4" @blur="validatePhone" @input="validatePhone" required placeholder="如：1234" :style="`width:100%;padding:10px;border:1px solid ${phoneError ? '#e22' : '#ddd'};border-radius:8px;`" />
-        <div v-if="phoneError" style="color:#e22;font-size:12px;margin-top:4px;">{{ phoneError }}</div>
+      <div class="form-group">
+        <label>电话后四位</label>
+        <input v-model="form.phoneLast4" @blur="validatePhone" @input="validatePhone" required placeholder="如：1234" :class="['form-input', { 'error': phoneError }]" />
+        <div v-if="phoneError" class="field-error">{{ phoneError }}</div>
       </div>
-      <div>
-        <label style="display:block;margin-bottom:6px;">登记人</label>
-        <input v-model="form.registrar" required placeholder="登记人" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;" />
+      <div class="form-group">
+        <label>登记人</label>
+        <input v-model="form.registrar" required placeholder="登记人" class="form-input" />
       </div>
     </div>
-    <div style="margin-top:12px;display:flex;align-items:center;gap:12px;">
-      <button :disabled="!canSubmit" type="submit" style="padding:10px 16px;border-radius:8px;border:1px solid #16a34a;background:#16a34a;color:#fff;">保存</button>
-      <span v-if="success" style="color:#067; margin-left:12px;">{{ success }}</span>
-      <span v-if="error" style="color:#c00; margin-left:12px;">{{ error }}</span>
+    <div class="form-actions">
+      <button :disabled="!canSubmit" type="submit" class="submit-btn">保存</button>
+      <span v-if="success" class="success-message">{{ success }}</span>
+      <span v-if="error" class="error-message">{{ error }}</span>
     </div>
   </form>
   
 </template>
 
 <style scoped>
+.storage-form {
+  max-width: 820px;
+  margin: 24px auto;
+  padding: 20px;
+}
+
+.form-title {
+  margin: 0 0 12px;
+  font-size: 18px;
+}
+
+.form-group {
+  margin-bottom: 12px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.form-input.error {
+  border-color: #e22;
+}
+
+.field-error {
+  color: #e22;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.form-actions {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.submit-btn {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid #16a34a;
+  background: #16a34a;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.success-message {
+  color: #067;
+}
+
+.error-message {
+  color: #c00;
+}
+
+@media (max-width: 768px) {
+  .form-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .submit-btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .storage-form {
+    padding: 16px;
+  }
+  
+  .form-title {
+    font-size: 16px;
+  }
+}
 </style>
 
 

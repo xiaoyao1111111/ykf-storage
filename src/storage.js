@@ -1,47 +1,41 @@
-// Simple localStorage-backed data store for users and records
-const USERS_KEY = 'ykf_users';
+// Firebase-backed store for users and records
+import { db } from './firebase'
+import { collection, addDoc, getDocs, query, orderBy, deleteDoc, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore'
+
 const SESSION_KEY = 'ykf_session_user';
-const RECORDS_KEY = 'ykf_records';
 
-function readJson(key, fallback) {
+function readSession() {
 	try {
-		const raw = localStorage.getItem(key);
-		if (!raw) return fallback;
-		return JSON.parse(raw);
-	} catch (e) {
-		return fallback;
+		const raw = localStorage.getItem(SESSION_KEY);
+		return raw ? JSON.parse(raw) : null;
+	} catch { return null }
+}
+function writeSession(value) {
+	localStorage.setItem(SESSION_KEY, JSON.stringify(value));
+}
+
+export async function seedUsersIfEmpty() {
+	// Store seed users in a 'users' collection if empty
+	const usersRef = collection(db, 'users');
+	const snap = await getDocs(usersRef);
+	if (!snap.empty) return;
+	await addDoc(usersRef, { username: '姚凯峰', password: 'root' });
+	await addDoc(usersRef, { username: '笑笑', password: '5555' });
+}
+
+export async function login(username, password) {
+	const usersRef = collection(db, 'users');
+	const snap = await getDocs(usersRef);
+	let ok = false;
+	for (const u of snap.docs) {
+		const data = u.data();
+		if (data.username === username && data.password === password) {
+			writeSession({ username: data.username });
+			ok = true;
+			break;
+		}
 	}
-}
-
-function writeJson(key, value) {
-	localStorage.setItem(key, JSON.stringify(value));
-}
-
-function generateId() {
-	// Simple, collision-resistant enough for this app without using global crypto
-	const now = Date.now().toString(36);
-	const rand = Math.random().toString(36).slice(2, 10);
-	return `${now}-${rand}`;
-}
-
-export function seedUsersIfEmpty() {
-	const existing = readJson(USERS_KEY, null);
-	if (existing && Array.isArray(existing) && existing.length > 0) return;
-	const users = [
-		{ username: '姚凯峰', password: 'root' },
-		{ username: '笑笑', password: '5555' },
-	];
-	writeJson(USERS_KEY, users);
-}
-
-export function login(username, password) {
-	const users = readJson(USERS_KEY, []);
-	const user = users.find(u => u.username === username && u.password === password);
-	if (user) {
-		writeJson(SESSION_KEY, { username: user.username });
-		return { ok: true, user: { username: user.username } };
-	}
-	return { ok: false, error: '用户名或密码不正确' };
+	return ok ? { ok: true, user: { username } } : { ok: false, error: '用户名或密码不正确' };
 }
 
 export function logout() {
@@ -49,69 +43,58 @@ export function logout() {
 }
 
 export function getSessionUser() {
-	return readJson(SESSION_KEY, null);
+	return readSession();
 }
 
-export function listRecords() {
-	return readJson(RECORDS_KEY, []);
+export async function listRecords() {
+	const recordsRef = collection(db, 'records');
+	const qy = query(recordsRef, orderBy('createdAt', 'desc'));
+	const snap = await getDocs(qy);
+	return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
-export function addRecord(record) {
-	// record: { date, productName, quantity, customerName?, phoneLast4, registrar }
-	const requiredFields = ['date', 'productName', 'quantity', 'registrar', 'phoneLast4'];
-	for (const f of requiredFields) {
-		if (!record[f]) throw new Error(`缺少必填字段: ${f}`);
-	}
-	if (!/^\d{4}$/.test(String(record.phoneLast4))) {
-		throw new Error('电话后四位需为4位数字');
-	}
-	const normalized = {
-		id: generateId(),
+export async function addRecord(record) {
+	const required = ['date', 'productName', 'quantity', 'registrar', 'phoneLast4'];
+	for (const f of required) if (!record[f]) throw new Error(`缺少必填字段: ${f}`);
+	if (!/^\d{4}$/.test(String(record.phoneLast4))) throw new Error('电话后四位需为4位数字');
+	const docRef = await addDoc(collection(db, 'records'), {
 		date: record.date,
 		productName: record.productName,
 		quantity: Number(record.quantity),
 		customerName: record.customerName || '',
 		phoneLast4: record.phoneLast4,
 		registrar: record.registrar,
-		createdAt: new Date().toISOString(),
-	};
-	const records = listRecords();
-	records.push(normalized);
-	writeJson(RECORDS_KEY, records);
-	return normalized;
+		createdAt: Date.now(),
+	});
+	const created = await getDoc(doc(db, 'records', docRef.id));
+	return { id: docRef.id, ...created.data() };
 }
 
-export function removeRecord(id) {
-	const records = listRecords();
-	const next = records.filter(r => r.id !== id);
-	writeJson(RECORDS_KEY, next);
-	return records.length !== next.length;
+export async function removeRecord(id) {
+	await deleteDoc(doc(db, 'records', id));
+	return true;
 }
 
-export function clearAll() {
-	localStorage.removeItem(RECORDS_KEY);
-	localStorage.removeItem(USERS_KEY);
-	localStorage.removeItem(SESSION_KEY);
+export async function clearAll() {
+	// Not typically used for cloud; left unimplemented intentionally
+	return false;
 }
 
-
-export function takeFromRecord(id, amount, operator) {
+export async function takeFromRecord(id, amount, operator) {
 	const qty = Number(amount);
-	if (!Number.isFinite(qty) || qty <= 0) {
-		throw new Error('取出数量需为正数');
-	}
-	const records = listRecords();
-	const idx = records.findIndex(r => r.id === id);
-	if (idx === -1) throw new Error('记录不存在');
-	const rec = records[idx];
-	if (qty > Number(rec.quantity)) {
-		throw new Error('库存不足');
-	}
-	rec.quantity = Number(rec.quantity) - qty;
-	rec.lastTakenAt = new Date().toISOString();
-	rec.lastOperator = operator || '';
-	writeJson(RECORDS_KEY, records);
-	return { ...rec };
+	if (!Number.isFinite(qty) || qty <= 0) throw new Error('取出数量需为正数');
+	const ref = doc(db, 'records', id);
+	const snapshot = await getDoc(ref);
+	if (!snapshot.exists()) throw new Error('记录不存在');
+	const rec = snapshot.data();
+	if (qty > Number(rec.quantity)) throw new Error('库存不足');
+	await updateDoc(ref, {
+		quantity: Number(rec.quantity) - qty,
+		lastTakenAt: Date.now(),
+		lastOperator: operator || ''
+	});
+	const updated = await getDoc(ref);
+	return { id, ...updated.data() };
 }
 
 
