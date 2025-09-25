@@ -34,13 +34,18 @@ function onRefresh() {
       </div>
     </header>
 
-    <main>
-      <Login v-if="!user" @success="onLoginSuccess" />
-      <div v-else class="section">
-        <StorageForm @refresh="onRefresh" />
-        <RecordList ref="recordListRef" />
+  <main>
+    <Login v-if="!user" @success="onLoginSuccess" />
+    <div v-else class="section">
+      <div class="debug-info" style="background:#f0f0f0;padding:8px;margin-bottom:12px;font-size:12px;">
+        <div>用户: {{ user?.username }}</div>
+        <div>时间: {{ new Date().toLocaleString() }}</div>
+        <div>网络: {{ navigator.onLine ? '在线' : '离线' }}</div>
       </div>
-    </main>
+      <StorageForm @refresh="onRefresh" />
+      <RecordList ref="recordListRef" />
+    </div>
+  </main>
   </div>
 </template>
 

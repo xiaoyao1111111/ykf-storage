@@ -54,9 +54,27 @@ export async function listRecords() {
 		console.log('Firebase records loaded:', snap.docs.length);
 		const records = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 		console.log('Records data:', records);
+		
+		// 同时保存到本地存储作为备份
+		localStorage.setItem('ykf_records_backup', JSON.stringify(records));
+		
 		return records;
 	} catch (error) {
-		console.error('Error loading records:', error);
+		console.error('Error loading records from Firebase:', error);
+		console.log('Trying local backup...');
+		
+		// 如果 Firebase 失败，尝试从本地存储读取
+		try {
+			const backup = localStorage.getItem('ykf_records_backup');
+			if (backup) {
+				const localRecords = JSON.parse(backup);
+				console.log('Loaded from local backup:', localRecords.length, 'records');
+				return localRecords;
+			}
+		} catch (localError) {
+			console.error('Error loading from local backup:', localError);
+		}
+		
 		return [];
 	}
 }
