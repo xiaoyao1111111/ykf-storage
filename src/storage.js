@@ -52,7 +52,9 @@ export async function listRecords() {
 		const qy = query(recordsRef, orderBy('createdAt', 'desc'));
 		const snap = await getDocs(qy);
 		console.log('Firebase records loaded:', snap.docs.length);
-		return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+		const records = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+		console.log('Records data:', records);
+		return records;
 	} catch (error) {
 		console.error('Error loading records:', error);
 		return [];
@@ -72,7 +74,7 @@ export async function addRecord(record) {
 			customerName: record.customerName || '',
 			phoneLast4: record.phoneLast4,
 			registrar: record.registrar,
-			createdAt: Date.now(),
+			createdAt: new Date().toISOString(),
 		});
 		console.log('Record added to Firebase:', docRef.id);
 		
