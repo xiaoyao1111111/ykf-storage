@@ -1,9 +1,17 @@
 {
-  "functions": {
-    "api/*.js": {
-      "runtime": "nodejs18.x"
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
     }
-  },
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    }
+  ],
   "env": {
     "TIDB_HOST": "gateway01.ap-southeast-1.prod.alicloud.tidbcloud.com",
     "TIDB_PORT": "4000",

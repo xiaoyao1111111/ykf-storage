@@ -1,7 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { listRecords, removeRecord, takeFromRecord, getSessionUser } from '../storage'
-import { testApiConnection } from '../tidb-api'
 import { collection, addDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 
@@ -72,8 +71,6 @@ const filtered = computed(() => {
 })
 
 onMounted(async () => { 
-	// 测试 API 连接
-	await testApiConnection()
 	await refresh()
 	// 测试 Firebase 连接
 	testFirebase()
