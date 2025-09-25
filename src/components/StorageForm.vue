@@ -74,18 +74,61 @@ function testClick() {
 	alert('测试按钮点击成功！')
 }
 
-async function forceSubmit() {
-	console.log('Force submit triggered')
+function localSave() {
+	console.log('Local save triggered')
+	alert('开始本地保存...')
+	
 	try {
 		const payload = { ...form.value }
+		console.log('Local save payload:', payload)
+		
+		// 直接保存到 localStorage
+		const records = JSON.parse(localStorage.getItem('ykf_records_backup') || '[]')
+		const newRecord = {
+			id: Date.now().toString(),
+			...payload,
+			quantity: Number(payload.quantity),
+			createdAt: new Date().toISOString()
+		}
+		records.unshift(newRecord)
+		localStorage.setItem('ykf_records_backup', JSON.stringify(records))
+		
+		alert('本地保存成功！')
+		success.value = '本地保存成功'
+		error.value = ''
+		resetForm()
+		emit('refresh')
+	} catch (err) {
+		console.error('Error in local save:', err)
+		alert('本地保存失败: ' + (err?.message || '未知错误'))
+		success.value = ''
+		error.value = err?.message || '本地保存失败'
+	}
+}
+
+async function forceSubmit() {
+	console.log('Force submit triggered')
+	alert('开始强制保存...')
+	
+	try {
+		const payload = { ...form.value }
+		console.log('Payload:', payload)
+		
+		// 先显示正在保存
+		success.value = '正在保存...'
+		error.value = ''
+		
 		await addRecord(payload)
 		console.log('Record added successfully via force submit')
+		
+		alert('保存成功！')
 		success.value = '强制保存成功'
 		error.value = ''
 		resetForm()
 		emit('refresh')
 	} catch (err) {
 		console.error('Error in force submit:', err)
+		alert('保存失败: ' + (err?.message || '未知错误'))
 		success.value = ''
 		error.value = err?.message || '强制保存失败'
 	}
@@ -156,6 +199,7 @@ async function submitForm(e) {
       <button :disabled="!canSubmit" type="submit" class="submit-btn" @click="submitForm">保存</button>
       <button type="button" @click="testClick" style="padding:8px 12px;border:1px solid #666;background:#f0f0f0;margin-left:8px;">测试点击</button>
       <button type="button" @click="forceSubmit" style="padding:8px 12px;border:1px solid #f00;background:#fcc;margin-left:8px;">强制保存</button>
+      <button type="button" @click="localSave" style="padding:8px 12px;border:1px solid #0a0;background:#cfc;margin-left:8px;">本地保存</button>
       <span v-if="success" class="success-message">{{ success }}</span>
       <span v-if="error" class="error-message">{{ error }}</span>
     </div>
